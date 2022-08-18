@@ -1,0 +1,16 @@
+---
+
+- name: Deploy softether-vpnserver
+  hosts: '{{ host }}'
+  vars:
+    vpn_users:
+      - name: user1
+        pass: secretPa$$w0rd!
+      - name: user2
+        pass: secretPa$$w0rd!
+    management_pass: secretPa$$w0rd!
+    bridge_to: eth1
+
+  roles:
+    - softether-vpnserver
+

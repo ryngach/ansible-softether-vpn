@@ -1,0 +1,63 @@
+---
+- name: install softether-vpnclient
+  apt:
+    name: softether-vpnclient
+    state: latest
+    update_cache: yes
+
+- name: set management password
+  command: "vpncmd /client localhost /CMD {{ item }}"
+  loop:
+    - PasswordSet {{ management_pass }} /REMOTEONLY:yes
+    - RemoteEnable
+
+- name: check if vpn nic is exist
+  command: "vpncmd /client localhost /CMD NicList"
+  register: nic_list
+
+- name: create vpn nic
+  command: "vpncmd /client localhost /CMD NicCreate {{ item.name }}"
+  when: "item.name not in nic_list.stdout"
+  loop: "{{ vpn_accounts }}"
+
+- name: enable vpn nic
+  command: "vpncmd /client localhost /CMD NicEnable {{ item.name }}"
+  when: "item.name in nic_list.stdout"
+  loop: "{{ vpn_accounts }}"
+
+- name: check if vpn account is exist
+  command: "vpncmd /client localhost /CMD AccountList"
+  register: account_list
+
+- name: cerate vpn account
+  command: "vpncmd /client localhost /CMD AccountCreate {{ item.name }} /SERVER:{{ item.server_ip }}:443 /HUB:DEFAULT /USERNAME:{{ item.login }} /NICNAME:{{ item.name}}"
+  when:
+    - vpn_accounts != ''
+    - "'VPN Connection Setting Name |' + item.name not in account_list.stdout"
+  loop: "{{ vpn_accounts }}"
+
+- set_fact:
+    cmd:
+      - 'AccountPasswordSet {{ item.name }} /PASSWORD:{{ item.pass }} /TYPE:standard'
+      - 'AccountStartupSet {{ item.name }}'
+      - 'AccountEncryptEnable {{ item.name }}'
+      - 'AccountDetailSet {{ item.name }} {{ vpn_options }}'
+  loop: '{{ vpn_accounts }}'
+  when: vpn_accounts != ''
+
+- name: configure vpn account
+  command: "vpncmd /client localhost /CMD {{ item }}"
+  loop: "{{ cmd }}"
+  when: vpn_accounts != ''
+
+- name: connect vpn
+  command: "vpncmd /client localhost /CMD AccountConnect {{ item.name }}"
+  when: "'Status                      |Offline' in account_list.stdout"
+  loop: "{{ vpn_accounts }}"
+
+- name: configure ip and route
+  template:
+    dest: '/etc/network/interfaces.d/sevpn_{{ item.name }}'
+    src: templates/sevpn.j2
+  notify: restart network
+  loop: "{{ vpn_accounts }}"

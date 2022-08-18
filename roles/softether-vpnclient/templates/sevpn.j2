@@ -1,0 +1,6 @@
+auto vpn_{{ item.name }}
+allow-hotplug vpn_{{ item.name }}
+iface vpn_{{ item.name }} inet static
+        address {{ item.ip }}
+        post-up ip route add {{ item.route }} dev vpn_{{ item.name }}
+        post-down ip route del {{ item.route }} dev vpn_{{ item.name }}

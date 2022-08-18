@@ -1,0 +1,16 @@
+---
+
+- name: Deploy softether-vpnclient 
+  hosts: '{{ host }}'
+  vars:
+    management_pass: secretPa$$w0rd!
+    vpn_accounts:
+      - name: test #must be unique
+        login: user1
+        pass: secretPa$$w0rd!
+        ip: "10.0.0.2/24"
+        server_ip: "{{ vpn_server_ip }}"
+        route: "10.0.0.0/24 via 10.0.0.1"
+
+  roles:
+    - softether-vpnclient

@@ -1,0 +1,5 @@
+vpn_nic: vpn
+vpn_options: /MAXTCP:8 /DISABLEUDP:yes /INTERVAL:1 /TTL:0 /HALF:no /BRIDGE:no /MONITOR:no /NOTRACK:no /NOQOS:no 
+management_pass: secretPassw0rd!
+
+

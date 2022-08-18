@@ -1,0 +1,217 @@
+---
+
+- name: install softether-vpnserver
+  apt:
+    name: softether-vpnserver
+    state: latest
+    update_cache: yes
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: set server password
+  uri:
+    force_basic_auth: yes
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: password_set
+  when: management_pass != ''
+  failed_when:
+    - password_set.json | json_query('error')
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: SetServerPassword
+      params:
+        PlainTextPassword_str: "{{ management_pass }}"
+
+- name: check if bridge is exist
+  uri:
+    force_basic_auth: yes
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: bridge_exist
+  when: bridge_to != ''
+  failed_when:
+    - bridge_exist.json | json_query('error')
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: EnumLocalBridge
+      params: 
+        LocalBridgeList:
+
+- debug:
+    var: bridge_exist.json | json_query('result.LocalBridgeList[*].DeviceName_str') 
+
+- name: create local bridge
+  uri:
+    force_basic_auth: yes
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: bridge
+  when:
+    - bridge_to != ''
+    - bridge_to not in ( bridge_exist.json | json_query('result.LocalBridgeList[*].DeviceName_str') )
+  failed_when:
+    - bridge.json | json_query('error')
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: AddLocalBridge
+      params:
+        DeviceName_str: '{{ bridge_to }}'
+        HubNameLB_str: '{{ hub }}'
+
+- name: add vpn users
+  uri:
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    force_basic_auth: yes
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: add_user
+  when: vpn_users != ''
+  failed_when:
+    - add_user.json | json_query('error')
+    - add_user.json | json_query('error.code') != 66
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: CreateUser
+      params:
+        HubName_str: "{{ hub }}"
+        Name_str: "{{ item.name }}"
+        AuthType_u32: 1
+        Auth_Password_str: "{{ item.pass }}"
+  loop: "{{ vpn_users }}"
+
+- name: set acl
+  uri:
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    force_basic_auth: yes
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: set_acl
+  when: acl_list != ''
+  failed_when:
+    - set_acl | json_query('error')
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: SetAcList
+      params:
+        HubName_str: "{{ hub }}"
+        ACList: "{{ acl_list }}"
+
+- name: Set openvpn, sstp protocols
+  uri:
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    force_basic_auth: yes
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: set_protocols
+  failed_when:
+    - set_protocols.json | json_query('error') 
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: SetOpenVpnSstpConfig
+      params:
+        EnableOpenVPN_bool: '{{ protocols.openvpn }}'
+        EnableSSTP_bool: '{{ protocols.sstp }}'
+
+- name: Set ipsec
+  uri:
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    force_basic_auth: yes
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: set_ipsec
+  failed_when:
+    - set_ipsec | json_query('error') 
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: SetIPsecServices
+      params:
+        L2TP_Raw_bool: '{{ protocols.l2tp_raw }}'
+        L2TP_IPsec_bool: '{{ protocols.l2tp_ipsec }}'
+        EtherIP_IPsec_bool: '{{ protocols.etherip }}'
+
+- name: configure listeners
+  uri:
+    url: https://localhost/api/
+    url_username: "administrator"
+    url_password: "{{ management_pass }}"
+    method: POST
+    body: "{{ body }}"
+    force_basic_auth: yes
+    status_code: 200
+    body_format: json
+    validate_certs: no
+    return_content: yes
+  register: set_listeners
+  failed_when:
+    - set_listeners.json | json_query('error')
+  vars:
+    body:
+      jsonrpc: '2.0'
+      id: rpc_call_id
+      method: EnableListener
+      params:
+        Port_u32: "{{ item.port }}"
+        Enable_bool: "{{ item.enabled }}"
+  loop: '{{ listeners }}'
+
+
+

@@ -1,0 +1,35 @@
+hub: DEFAULT
+management_pass: secretPassw0rd!
+vpn_nic: vpn
+listeners:
+  - port: 443
+    enabled: true
+  - port: 1194
+    enabled: false
+  - port: 992
+    enabled: false
+  - port: 5555
+    enabled: false
+vpn_users:
+  - name: user1
+    pass: secretPa$$w0rd!
+bridge_to: 
+acl_list:
+  # - Id_u32: 0
+  #   Priority_u32: 100
+  #   Deny_bool: false
+  #   Masked_bool: false
+  #   IpAddress_ip: 192.168.10.249
+  # - Id_u32: 1
+  #   Priority_u32: 200
+  #   Deny_bool: true
+  #   Masked_bool: true
+  #   IpAddress_ip: 0.0.0.0
+  #   SubnetMask_ip: 0.0.0.0
+protocols:
+  openvpn: false
+  sstp: false
+  ipsec: false
+  l2tp_raw: false
+  l2tp_ipsec: false
+  etherip: false
