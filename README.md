@@ -12,8 +12,8 @@ OS Debian/Ubuntu
 Role Variables
 --------------
 
-client: see [softether-vpnclient/defaults/main.yml](softether-vpnclient/defaults/main.yml)
-server: see [softether-vpnserver/defaults/main.yml](softether-vpnserver/defaults/main.yml)
+client: see [roles/softether-vpnclient/defaults/main.yml](roles/softether-vpnclient/defaults/main.yml)
+server: see [roles/softether-vpnserver/defaults/main.yml](roles/softether-vpnserver/defaults/main.yml)
 
 Example Playbook
 ----------------
